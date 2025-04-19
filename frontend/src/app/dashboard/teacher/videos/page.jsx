@@ -32,7 +32,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 
 // API base URL
-const API_URL = 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 // Get cookie function
 const getCookie = (name) => {
@@ -286,6 +286,7 @@ const VideoCard = ({ video, isDragging }) => (
 export default function VideosPage() {
   const router = useRouter();
   const [videos, setVideos] = useState([]);
+  const [allVideos, setAllVideos] = useState([]);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -299,8 +300,7 @@ export default function VideosPage() {
   const [orderSaved, setOrderSaved] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [currentCourseId, setCurrentCourseId] = useState(null);
-  const [currentDateTime] = useState('2025-04-19 09:53:34');
-  const [currentUser] = useState('ZainJ5');
+  const [savingOrder, setSavingOrder] = useState(false);
   
   // Configure DnD sensors for mouse, touch and keyboard
   const sensors = useSensors(
@@ -314,68 +314,102 @@ export default function VideosPage() {
     })
   );
 
-  // Fetch videos and courses
+  // Fetch courses
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchCourses = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/courses/my`);
+        setCourses(response.data);
+        
+        // Set default course filter if no course is selected yet
+        if (!courseFilter && response.data.length > 0) {
+          setCourseFilter(response.data[0]._id);
+          setCurrentCourseId(response.data[0]._id);
+        }
+      } catch (err) {
+        console.error('Error fetching courses:', err);
+      }
+    };
+    
+    fetchCourses();
+  }, []);
+
+  // Fetch videos whenever the course filter changes
+  useEffect(() => {
+    const fetchVideos = async () => {
       try {
         setLoading(true);
         
-        // Fetch courses
-        const coursesResponse = await axios.get(`${API_URL}/courses/teacher`);
-        setCourses(coursesResponse.data);
-        
-        // Fetch videos (assuming an endpoint exists to fetch teacher's videos)
-        const videosResponse = await axios.get(`${API_URL}/videos/teacher`);
-        
-        // Process the video data to include course names
-        const processedVideos = videosResponse.data.map(video => {
-          const course = coursesResponse.data.find(c => c._id === video.course);
-          return {
-            ...video,
-            courseName: course ? course.title : 'Unknown Course'
-          };
-        });
-        
-        setVideos(processedVideos);
-        
-        // If filtering by course, set the currentCourseId
         if (courseFilter) {
-          setCurrentCourseId(courseFilter);
-        } else if (processedVideos.length > 0) {
-          // Group videos by course to find the course with most videos
-          const courseGroups = processedVideos.reduce((acc, video) => {
-            if (!acc[video.course]) acc[video.course] = 0;
-            acc[video.course]++;
-            return acc;
-          }, {});
+          // Fetch videos for specific course
+          const response = await axios.get(`${API_URL}/videos/${courseFilter}`);
           
-          // Find course with the most videos
-          let maxCount = 0;
-          let mostPopularCourseId = null;
-          
-          Object.entries(courseGroups).forEach(([courseId, count]) => {
-            if (count > maxCount) {
-              maxCount = count;
-              mostPopularCourseId = courseId;
-            }
+          // Process the video data to include course names
+          const processedVideos = response.data.map(video => {
+            const course = courses.find(c => c._id === video.course);
+            return {
+              ...video,
+              courseName: course ? course.title : 'Unknown Course'
+            };
           });
           
-          setCurrentCourseId(mostPopularCourseId);
+          setVideos(processedVideos);
+          setCurrentCourseId(courseFilter);
+          setOrderSaved(true); // Videos are already in their saved order when fetched by course
+        } else {
+          // Fetch all videos for teacher
+          const response = await axios.get(`${API_URL}/videos/teacher`);
+          
+          // Process the video data to include course names
+          const processedVideos = response.data.map(video => {
+            const course = courses.find(c => c._id === video.course);
+            return {
+              ...video,
+              courseName: course ? course.title : 'Unknown Course'
+            };
+          });
+          
+          setAllVideos(processedVideos);
+          setVideos(processedVideos);
+          
+          // Find course with most videos to set as default
+          if (processedVideos.length > 0 && !currentCourseId) {
+            const courseGroups = processedVideos.reduce((acc, video) => {
+              if (!acc[video.course]) acc[video.course] = 0;
+              acc[video.course]++;
+              return acc;
+            }, {});
+            
+            let maxCount = 0;
+            let mostPopularCourseId = null;
+            
+            Object.entries(courseGroups).forEach(([courseId, count]) => {
+              if (count > maxCount) {
+                maxCount = count;
+                mostPopularCourseId = courseId;
+              }
+            });
+            
+            setCurrentCourseId(mostPopularCourseId);
+          }
         }
       } catch (err) {
-        console.error('Error fetching data:', err);
+        console.error('Error fetching videos:', err);
       } finally {
         setLoading(false);
       }
     };
     
-    fetchData();
-  }, [courseFilter]);
+    // Only fetch if courses are loaded
+    if (courses.length > 0) {
+      fetchVideos();
+    }
+  }, [courseFilter, courses]);
 
   useEffect(() => {
-    // Disable drag and drop when filters are applied
-    setDragDisabled(!!searchTerm || !!courseFilter);
-  }, [searchTerm, courseFilter]);
+    // Disable drag and drop when search is applied
+    setDragDisabled(!!searchTerm);
+  }, [searchTerm]);
 
   // Hide success message after 3 seconds
   useEffect(() => {
@@ -424,6 +458,8 @@ export default function VideosPage() {
         return;
       }
       
+      setSavingOrder(true);
+      
       // Get IDs in the new order from the filtered and course-specific videos
       const orderedIds = filteredVideos
         .filter(video => video.course === currentCourseId)
@@ -444,21 +480,22 @@ export default function VideosPage() {
     } catch (err) {
       console.error('Error saving video order:', err);
       alert('Failed to save custom order. Please try again.');
+    } finally {
+      setSavingOrder(false);
     }
   };
 
   const clearFilters = () => {
     setSearchTerm('');
-    setCourseFilter('');
+    // Don't clear course filter as it's our primary navigation
   };
 
   // Filter and sort videos
   const filteredVideos = videos.filter(video => {
     const matchesSearch = video.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          (video.description && video.description.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesCourse = courseFilter ? video.course === courseFilter : true;
     
-    return matchesSearch && matchesCourse;
+    return matchesSearch;
   }).sort((a, b) => {
     if (sortBy === 'title') {
       return sortOrder === 'asc' 
@@ -480,8 +517,7 @@ export default function VideosPage() {
   });
 
   const activeFiltersCount = [
-    searchTerm, 
-    courseFilter
+    searchTerm
   ].filter(Boolean).length;
 
   return (
@@ -494,16 +530,21 @@ export default function VideosPage() {
         <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
           <button
             onClick={saveCustomOrder}
-            disabled={orderSaved || filteredVideos.length <= 1 || !currentCourseId}
+            disabled={orderSaved || filteredVideos.length <= 1 || !currentCourseId || savingOrder}
             className={`px-4 py-2 rounded-lg border transition-colors flex items-center justify-center ${
               sortBy === 'order' && orderSaved
                 ? 'bg-green-50 border-green-300 text-green-700' 
-                : filteredVideos.length <= 1 || !currentCourseId
+                : filteredVideos.length <= 1 || !currentCourseId || savingOrder
                   ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
             }`}
           >
-            {sortBy === 'order' && orderSaved ? (
+            {savingOrder ? (
+              <>
+                <FaSpinner className="mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : sortBy === 'order' && orderSaved ? (
               <>
                 <FaCheckCircle className="mr-2" />
                 Custom Order Saved
@@ -511,7 +552,7 @@ export default function VideosPage() {
             ) : (
               <>
                 <FaSave className="mr-2" />
-                Save & Show Custom Order
+                Save Custom Order
               </>
             )}
           </button>
@@ -541,9 +582,36 @@ export default function VideosPage() {
         )}
       </AnimatePresence>
 
-      {/* Filters and search */}
+      {/* Course selection dropdown */}
       <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-        <div className="flex flex-col lg:flex-row space-y-4 lg:space-y-0 lg:space-x-4">
+        <div className="flex flex-col space-y-4 lg:flex-row lg:space-y-0 lg:items-center lg:space-x-4">
+          <div className="lg:w-1/3">
+            <label htmlFor="courseSelect" className="block text-sm font-medium text-gray-700 mb-1">
+              Select Course
+            </label>
+            <div className="relative">
+              <select
+                id="courseSelect"
+                value={courseFilter}
+                onChange={(e) => setCourseFilter(e.target.value)}
+                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+              >
+                {courses.length === 0 ? (
+                  <option value="">No courses available</option>
+                ) : (
+                  courses.map(course => (
+                    <option key={course._id} value={course._id}>
+                      {course.title}
+                    </option>
+                  ))
+                )}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                <FaChevronDown className="h-4 w-4 text-gray-400" />
+              </div>
+            </div>
+          </div>
+
           <div className="flex-1 relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <FaSearch className="text-gray-400" />
@@ -553,7 +621,7 @@ export default function VideosPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search videos..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {searchTerm && (
               <button 
@@ -565,60 +633,7 @@ export default function VideosPage() {
             )}
           </div>
           
-          <div className="flex flex-wrap gap-2">
-            <div className="relative">
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`px-4 py-2 rounded-lg border flex items-center transition-colors ${
-                  activeFiltersCount > 0 
-                    ? 'bg-blue-50 border-blue-300 text-blue-700' 
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <FaFilter className="mr-2" size={14} />
-                Filters
-                {activeFiltersCount > 0 && (
-                  <span className="ml-2 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                    {activeFiltersCount}
-                  </span>
-                )}
-              </button>
-              
-              {showFilters && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg z-10 border border-gray-200">
-                  <div className="p-4">
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className="font-medium text-gray-800">Filters</h3>
-                      {activeFiltersCount > 0 && (
-                        <button 
-                          onClick={clearFilters}
-                          className="text-xs text-blue-600 hover:text-blue-800"
-                        >
-                          Clear all
-                        </button>
-                      )}
-                    </div>
-                    
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
-                      <select
-                        value={courseFilter}
-                        onChange={(e) => setCourseFilter(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">All Courses</option>
-                        {courses.map(course => (
-                          <option key={course._id} value={course._id}>
-                            {course.title}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            
+          <div className="flex space-x-2 lg:w-auto">
             <div className="relative">
               <button
                 className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 flex items-center"
@@ -677,18 +692,6 @@ export default function VideosPage() {
                 </button>
               </div>
             )}
-            
-            {courseFilter && (
-              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-50 text-blue-700">
-                <span>Course: {courses.find(c => c._id === courseFilter)?.title}</span>
-                <button 
-                  onClick={() => setCourseFilter('')}
-                  className="ml-2 text-blue-500 hover:text-blue-700"
-                >
-                  <FaTimes size={12} />
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -704,7 +707,7 @@ export default function VideosPage() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
-                Arrange your videos in your preferred order by dragging and dropping them. Click "Save & Show Custom Order" when done.
+                Arrange your videos in your preferred order by dragging and dropping them. Click "Save Custom Order" when done.
               </p>
             </div>
           </div>
@@ -812,17 +815,19 @@ export default function VideosPage() {
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-1">No videos found</h3>
           <p className="text-gray-500 mb-6">
-            {searchTerm || courseFilter 
-              ? "Try adjusting your filters or search term" 
-              : "You haven't uploaded any videos yet"}
+            {searchTerm 
+              ? "Try adjusting your search term" 
+              : courseFilter 
+                ? "This course doesn't have any videos yet" 
+                : "You haven't uploaded any videos yet"}
           </p>
-          {!searchTerm && !courseFilter && (
+          {!searchTerm && (
             <Link 
-              href="/dashboard/teacher/videos/upload"
+              href={`/dashboard/teacher/videos/upload${courseFilter ? `?course=${courseFilter}` : ''}`}
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <FaUpload className="mr-2" />
-              Upload Your First Video
+              {courses.length > 0 ? 'Upload a Video' : 'Create a Course First'}
             </Link>
           )}
         </motion.div>
@@ -830,7 +835,7 @@ export default function VideosPage() {
 
       {/* User and date info */}
       <div className="mt-6 text-sm text-gray-500 text-right">
-        {currentDateTime} • {currentUser}
+        {new Date().toISOString().split('T')[0]} {new Date().toTimeString().split(' ')[0].substring(0, 5)} • {getCookie('name') || 'Teacher'}
       </div>
     </TeacherLayout>
   );

@@ -8,7 +8,7 @@ import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaUser, FaGraduationCap, FaChalk
 import axios from 'axios';
 
 // API base URL
-const API_URL = 'http://localhost:5000/api/auth';
+const API_URL = 'http://165.22.220.125:5000/api/auth';
 
 // Set cookie function
 const setCookie = (name, value, days = 7) => {
