@@ -161,3 +161,17 @@ exports.generateTranscript = async (req, res) => {
       res.status(500).json({ error: "Something went wrong", details: err.message });
     }
   };
+
+  exports.getVideosByCourse = async (req, res) => {
+    try {
+      const { courseId } = req.params;
+  
+      const videos = await Video.find({ course: courseId }).sort({ order: 1 });
+  
+      res.status(200).json(videos);
+    } catch (error) {
+      console.error("Error fetching videos:", error);
+      res.status(500).json({ message: "Server Error" });
+    }
+  };
+  

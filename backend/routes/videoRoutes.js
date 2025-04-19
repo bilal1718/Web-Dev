@@ -7,6 +7,8 @@ const {
   updateVideo,
   generateTranscript,
 } = require("../controllers/videoController");
+const { getVideosByCourse } = require("../controllers/videoController");
+
 const { protect, protectTutor } = require("../middlewares/authMiddleware");
 
 // POST /api/videos/upload/:courseId
@@ -20,5 +22,8 @@ router.patch("/reorder/:courseId", protect, protectTutor, reorderVideos);
 
 // PATCH /api/videos/:id
 router.patch("/:id", protect, protectTutor, upload.single("video"), updateVideo);
+
+router.get("/:courseId", protect, getVideosByCourse);
+
 
 module.exports = router;
