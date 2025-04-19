@@ -5,18 +5,41 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaUser, FaGraduationCap, FaChalkboardTeacher, FaExclamationCircle } from 'react-icons/fa';
+import axios from 'axios';
 
-// Fixed credentials for testing
-const DEMO_CREDENTIALS = {
-  student: {
-    email: 'student@example.com',
-    password: 'student123'
-  },
-  teacher: {
-    email: 'teacher@example.com',
-    password: 'teacher123'
-  }
+// API base URL
+const API_URL = 'http://localhost:5000/api/auth';
+
+// Set cookie function
+const setCookie = (name, value, days = 7) => {
+  const expires = new Date();
+  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Strict`;
 };
+
+// Get cookie function
+const getCookie = (name) => {
+  const cookies = document.cookie.split(';');
+  for (let i = 0; i < cookies.length; i++) {
+    const cookie = cookies[i].trim();
+    if (cookie.startsWith(name + '=')) {
+      return cookie.substring(name.length + 1);
+    }
+  }
+  return null;
+};
+
+// Configure axios with interceptor for auth headers
+axios.interceptors.request.use(
+  (config) => {
+    const token = getCookie('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 export default function AuthForm() {
   const router = useRouter();
@@ -25,6 +48,9 @@ export default function AuthForm() {
   const [animating, setAnimating] = useState(false);
   const [userType, setUserType] = useState('student'); // student or teacher
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [currentDateTime] = useState('2025-04-19 09:30:05');
+  const [currentUser] = useState('ZainJ5');
   
   const [loginData, setLoginData] = useState({
     email: '',
@@ -36,25 +62,28 @@ export default function AuthForm() {
     name: '',
     email: '',
     password: '',
-    userType: 'student'
+    role: 'student'
   });
 
   useEffect(() => {
     // Update signup data when userType changes
     setSignupData(prev => ({
       ...prev,
-      userType: userType
+      role: userType === 'student' ? 'student' : 'tutor'
     }));
   }, [userType]);
 
-  // For demonstration: Auto-fill credentials when "Use Demo Credentials" is clicked
-  const fillDemoCredentials = (type) => {
-    setLoginData({
-      email: DEMO_CREDENTIALS[type].email,
-      password: DEMO_CREDENTIALS[type].password,
-      rememberMe: false
-    });
-    setError('');
+  // Function to fetch user data using the /me endpoint
+  const fetchUserData = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/me`);
+      // Store user data in localStorage for easy access
+      localStorage.setItem('userData', JSON.stringify(response.data));
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      return null;
+    }
   };
 
   const handleLoginChange = (e) => {
@@ -72,37 +101,87 @@ export default function AuthForm() {
       ...signupData,
       [name]: value,
     });
+    setError(''); // Clear error when user types
   };
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     
-    // Check credentials
-    if (loginData.email === DEMO_CREDENTIALS.student.email && 
-        loginData.password === DEMO_CREDENTIALS.student.password) {
-      // Redirect to student dashboard
-      router.push('/dashboard/student');
-    } 
-    else if (loginData.email === DEMO_CREDENTIALS.teacher.email && 
-             loginData.password === DEMO_CREDENTIALS.teacher.password) {
-      // Redirect to teacher dashboard
-      router.push('/dashboard/teacher');
-    } 
-    else {
-      // Show error message
-      setError('Invalid email or password');
+    try {
+      const response = await axios.post(`${API_URL}/login`, {
+        email: loginData.email,
+        password: loginData.password
+      });
+      
+      const { user, token } = response.data;
+      
+      // Store token in cookie (7 days for remember me, 1 day for session)
+      const cookieDuration = loginData.rememberMe ? 7 : 1;
+      setCookie('token', token, cookieDuration);
+      
+      // Store basic user info in localStorage for UI purposes
+      localStorage.setItem('userBasicInfo', JSON.stringify({
+        id: user._id,
+        name: user.name,
+        role: user.role
+      }));
+
+      // Fetch detailed user data using /me endpoint
+      await fetchUserData();
+      
+      // Redirect based on user role
+      if (user.role === 'tutor') {
+        router.push('/dashboard/teacher');
+      } else {
+        router.push('/dashboard/student');
+      }
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || 'Login failed. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSignupSubmit = (e) => {
+  const handleSignupSubmit = async (e) => {
     e.preventDefault();
-    console.log('Signup form submitted:', signupData);
+    setLoading(true);
     
-    // For demo purposes, redirect to the appropriate dashboard
-    if (signupData.userType === 'teacher') {
-      router.push('/dashboard/teacher');
-    } else {
-      router.push('/dashboard/student');
+    try {
+      const response = await axios.post(`${API_URL}/register`, {
+        name: signupData.name,
+        email: signupData.email,
+        password: signupData.password,
+        role: signupData.role
+      });
+      
+      const { user, token } = response.data;
+      
+      // Store token in cookie (7 days default for new registrations)
+      setCookie('token', token, 7);
+      
+      // Store basic user info in localStorage for UI purposes
+      localStorage.setItem('userBasicInfo', JSON.stringify({
+        id: user._id,
+        name: user.name,
+        role: user.role
+      }));
+
+      // Fetch detailed user data using /me endpoint
+      await fetchUserData();
+      
+      // Redirect based on user role
+      if (user.role === 'tutor') {
+        router.push('/dashboard/teacher');
+      } else {
+        router.push('/dashboard/student');
+      }
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || 'Registration failed. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -129,6 +208,9 @@ export default function AuthForm() {
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
             {isLogin ? 'Sign in to your account' : 'Create your account'}
           </h2>
+          <p className="mt-2 text-sm text-gray-500">
+            {currentDateTime} • {currentUser}
+          </p>
         </div>
         
         {/* Toggle Buttons */}
@@ -152,29 +234,6 @@ export default function AuthForm() {
             Sign Up
           </button>
         </div>
-        
-        {/* Demo Credentials Notice */}
-        {isLogin && (
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm text-blue-800">
-            <p className="font-medium mb-1">Demo Credentials:</p>
-            <div className="flex flex-col space-y-1 mb-2">
-              <button 
-                type="button"
-                onClick={() => fillDemoCredentials('student')}
-                className="text-blue-600 hover:underline text-left"
-              >
-                Student: student@example.com / student123
-              </button>
-              <button 
-                type="button"
-                onClick={() => fillDemoCredentials('teacher')}
-                className="text-blue-600 hover:underline text-left"
-              >
-                Teacher: teacher@example.com / teacher123
-              </button>
-            </div>
-          </div>
-        )}
         
         <div className={`transition-all duration-300 ${animating ? 'opacity-0 transform translate-x-10' : 'opacity-100'}`}>
           {/* Display error message if there is one */}
@@ -258,9 +317,12 @@ export default function AuthForm() {
               <div>
                 <button
                   type="submit"
-                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  disabled={loading}
+                  className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white ${
+                    loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
+                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
                 >
-                  Sign in
+                  {loading ? 'Signing in...' : 'Sign in'}
                 </button>
               </div>
             </form>
@@ -366,9 +428,12 @@ export default function AuthForm() {
               <div>
                 <button
                   type="submit"
-                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  disabled={loading}
+                  className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white ${
+                    loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
+                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
                 >
-                  Create account
+                  {loading ? 'Creating account...' : 'Create account'}
                 </button>
               </div>
               

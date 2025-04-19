@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   FaHome, FaBook, FaUsers, FaVideo, 
   FaChartBar, FaCog, FaSignOutAlt, FaBars, FaTimes,
@@ -9,6 +10,7 @@ import {
 } from 'react-icons/fa';
 
 export default function TeacherLayout({ children }) {
+  const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
   
@@ -19,6 +21,14 @@ export default function TeacherLayout({ children }) {
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const handleLogout = () => {
+    // Remove the Token cookie
+    document.cookie = "Token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    
+    // Redirect to the homepage
+    router.push('/');
   };
 
   const navItems = [
@@ -41,17 +51,17 @@ export default function TeacherLayout({ children }) {
       icon: <FaUsers />, 
       label: 'Students', 
       href: '/dashboard/teacher/students'
-    },
+    }
     // { 
     //   icon: <FaChartBar />, 
     //   label: 'Analytics', 
     //   href: '/dashboard/teacher/analytics'
     // },
-    { 
-      icon: <FaCog />, 
-      label: 'Settings', 
-      href: '/dashboard/teacher/settings'
-    },
+    // { 
+    //   icon: <FaCog />, 
+    //   label: 'Settings', 
+    //   href: '/dashboard/teacher/settings'
+    // },
   ];
 
   return (
@@ -124,10 +134,13 @@ export default function TeacherLayout({ children }) {
             <div className="text-sm font-medium mb-4">{currentTime}</div>
             <div className="text-xs text-gray-500 mb-2">Current User's Login:</div>
             <div className="text-sm font-medium mb-4">ZainJ5</div>
-            <Link href="/logout" className="flex items-center p-3 text-red-600 rounded-lg hover:bg-red-50 transition-colors">
+            <button 
+              onClick={handleLogout}
+              className="flex items-center p-3 text-red-600 rounded-lg hover:bg-red-50 transition-colors w-full"
+            >
               <span className="mr-3"><FaSignOutAlt /></span>
               <span>Logout</span>
-            </Link>
+            </button>
           </div>
         </aside>
         
@@ -137,11 +150,11 @@ export default function TeacherLayout({ children }) {
         </main>
       </div>
       
-      <footer className="bg-white border-t p-4 text-center text-gray-500 text-sm">
+      {/* <footer className="bg-white border-t p-4 text-center text-gray-500 text-sm">
         <p>
           {currentTime} | User: ZainJ5
         </p>
-      </footer>
+      </footer> */}
       
       {/* Overlay for mobile sidebar */}
       {isSidebarOpen && (

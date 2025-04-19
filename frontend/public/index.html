@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduSphere | Transform Your Learning Experience</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/ScrollTrigger.min.js"></script>
+    <style>
+        :root {
+            --primary: #4A56E2;
+            --primary-dark: #3A46C2;
+            --secondary: #6C63FF;
+            --accent: #FF6B6B;
+            --text: #333333;
+            --text-light: #666666;
+            --bg-light: #F8F9FA;
+            --bg-dark: #1A1C2A;
+            --white: #FFFFFF;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        section {
+            position: relative;
+            padding: 80px 0;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Header Styles */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px 0;
+            background-color: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.06);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        header.scrolled {
+            padding: 12px 0;
+            background-color: rgba(255, 255, 255, 0.98);
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .logo-icon {
+            margin-right: 8px;
+            font-size: 28px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+        }
+
+        .nav-links a {
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 16px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(74, 86, 226, 0.3);
+        }
+
+        .btn-outline {
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            background-color: transparent;
+        }
+
+        .btn-outline:hover {
+            background-color: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(74, 86, 226, 0.2);
+        }
+
+        /* Canvas for 3D model */
+        #hero-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        /* Hero Section */
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            padding-top: 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-content {
+            width: 50%;
+            position: relative;
+            z-index: 5;
+            animation: fadeIn 1s ease-out;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            margin-bottom: 24px;
+            line-height: 1.2;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 32px;
+            color: var(--text-light);
+            max-width: 90%;
+            line-height: 1.6;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 16px;
+            margin-top: 40px;
+        }
+
+        .stats-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 48px;
+            display: flex;
+            gap: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            width: fit-content;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 0 16px;
+            border-right: 1px solid #eee;
+        }
+
+        .stat:last-child {
+            border-right: none;
+        }
+
+        .stat-number {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        /* Features Section */
+        .features {
+            background-color: white;
+            position: relative;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 64px;
+        }
+
+        .section-title h2 {
+            font-size: 2.5rem;
+            margin-bottom: 16px;
+            color: var(--primary);
+        }
+
+        .section-title p {
+            font-size: 1.1rem;
+            color: var(--text-light);
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 32px;
+            margin-top: 48px;
+        }
+
+        .feature-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 32px 24px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 0, 0, 0.03);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            color: white;
+            font-size: 24px;
+        }
+
+        .feature-card h3 {
+            font-size: 1.4rem;
+            margin-bottom: 16px;
+            color: var(--primary-dark);
+        }
+
+        .feature-card p {
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        /* How It Works Section */
+        .how-it-works {
+            background-color: var(--bg-light);
+            position: relative;
+        }
+
+        .steps-container {
+            display: flex;
+            flex-direction: column;
+            gap: 64px;
+            margin-top: 64px;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 48px;
+            opacity: 0;
+            transform: translateY(40px);
+            transition: all 0.8s ease;
+        }
+
+        .step.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .step:nth-child(even) {
+            flex-direction: row-reverse;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-image {
+            flex: 1;
+            background-color: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1);
+            position: relative;
+            height: 320px;
+        }
+
+        .step-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 40px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .step-content h3 {
+            font-size: 1.8rem;
+            margin-bottom: 16px;
+            color: var(--primary-dark);
+        }
+
+        .step-content p {
+            color: var(--text-light);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        /* Testimonials Section */
+        .testimonials {
+            background-color: white;
+            position: relative;
+        }
+
+        .testimonial-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-top: 48px;
+        }
+
+        .testimonial-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 0, 0, 0.03);
+        }
+
+        .testimonial-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .quote {
+            font-size: 1.1rem;
+            color: var(--text);
+            margin-bottom: 24px;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .quote::before {
+            content: """;
+            font-size: 5rem;
+            color: rgba(0, 0, 0, 0.05);
+            position: absolute;
+            top: -40px;
+            left: -20px;
+            font-family: Georgia, serif;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .author-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .author-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .author-title {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        /* CTA Section */
+        .cta {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('/api/placeholder/1200/300') center/cover no-repeat;
+            opacity: 0.1;
+            z-index: 1;
+        }
+
+        .cta .container {
+            position: relative;
+            z-index: 2;
+        }
+
+        .cta h2 {
+            font-size: 2.5rem;
+            margin-bottom: 24px;
+        }
+
+        .cta p {
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            opacity: 0.9;
+        }
+
+        .cta-form {
+            display: flex;
+            gap: 16px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .cta-form input {
+            flex: 1;
+            padding: 16px;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+        }
+
+        .cta-form button {
+            padding: 16px 32px;
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .cta-form button:hover {
+            background-color: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+        }
+
+        /* Footer */
+        footer {
+            background-color: var(--bg-dark);
+            color: white;
+            padding: 64px 0 32px;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px;
+            margin-bottom: 64px;
+        }
+
+        .footer-brand p {
+            color: rgba(255, 255, 255, 0.7);
+            margin: 16px 0 24px;
+            line-height: 1.6;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 16px;
+        }
+
+        .social-link {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .social-link:hover {
+            background-color: var(--primary);
+            transform: translateY(-4px);
+        }
+
+        .footer-links h4 {
+            font-size: 1.2rem;
+            margin-bottom: 24px;
+            color: white;
+        }
+
+        .footer-links ul {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 12px;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 32px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+            100% {
+                transform: translateY(0);
+            }
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 992px) {
+            .hero-content {
+                width: 100%;
+                text-align: center;
+                padding: 0 20px;
+            }
+
+            .hero p {
+                max-width: 100%;
+            }
+
+            .stats-card {
+                margin: 40px auto 0;
+            }
+
+            .hero-buttons {
+                justify-content: center;
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .step, .step:nth-child(even) {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .step-number {
+                margin: 0 auto 16px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links, .cta-buttons {
+                display: none;
+            }
+
+            .hamburger {
+                display: block;
+                cursor: pointer;
+                background: none;
+                border: none;
+                font-size: 24px;
+                color: var(--primary);
+            }
+
+            .hero h1 {
+                font-size: 2.8rem;
+            }
+
+            .feature-card {
+                text-align: center;
+            }
+
+            .feature-icon {
+                margin: 0 auto 24px;
+            }
+
+            .cta-form {
+                flex-direction: column;
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+        }
+
+        .hamburger {
+            display: none;
+        }
+
+        /* 3D model animation styles */
+        .model-container {
+            position: absolute;
+            right: 0;
+            width: 50%;
+            height: 100%;
+            z-index: 2;
+        }
+
+        /* Loader styles */
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loader-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(74, 86, 226, 0.2);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Pricing section */
+        .pricing {
+            background-color: var(--bg-light);
+            position: relative;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 32px;
+            margin-top: 48px;
+        }
+
+        .pricing-card {
+            background-color: white;
+            border-radius: 16px;
+            padding: 40px 24px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 0, 0, 0.03);
+            text-align: center;
+        }
+
+        .pricing-card.featured {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            transform: translateY(-16px);
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .pricing-card.featured:hover {
+            transform: translateY(-24px);
+        }
+
+        .pricing-title {
+            font-size: 1.4rem;
+            margin-bottom: 8px;
+            color: var(--primary-dark);
+        }
+
+        .pricing-card.featured .pricing-title,
+        .pricing-card.featured .pricing-subtitle,
+        .pricing-card.featured .pricing-feature {
+            color: white;
+        }
+
+        .pricing-subtitle {
+            color: var(--text-light);
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+        }
+
+        .pricing-price {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            color: var(--primary);
+        }
+
+        .pricing-card.featured .pricing-price {
+            color: white;
+        }
+
+        .pricing-period {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            display: block;
+            margin-top: 4px;
+        }
+
+        .pricing-features {
+            list-style: none;
+            margin: 32px 0;
+            padding: 0;
+        }
+
+        .pricing-feature {
+            padding: 8px 0;
+            color: var(--text-light);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .pricing-card.featured .pricing-feature {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .pricing-feature:last-child {
+            border-bottom: none;
+        }
+
+        .pricing-button {
+            display: inline-block;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            margin-top: 16px;
+            width: 100%;
+        }
+
+        .pricing-card:not(.featured) .pricing-button {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .pricing-card.featured .pricing-button {
+            background-color: white;
+            color: var(--primary);
+        }
+
+        .pricing-card:not(.featured) .pricing-button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(74, 86, 226, 0.3);
+        }
+
+        .pricing-card.featured .pricing-button:hover {
+            background-color: rgba(255, 255, 255, 0.9);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+        }
+
+        /* ScrollTrigger animation classes */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+
+        .fade-in.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .scale-in {
+            opacity: 0;
+            transform: scale(0.9);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+
+        .scale-in.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Loader -->
+    <div class="loader">
+        <div class="loader-spinner"></div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <nav>
+            <a href="#" class="logo">
+                <i class="fas fa-graduation-cap logo-icon"></i>
+                Edu<span>Sphere</span>
+            </a>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#how-it-works">How It Works</a>
+                <a href="#testimonials">Testimonials</a>
+                <a href="#pricing">Pricing</a>
+            </div>
+            <div class="cta-buttons">
+                <a href="/auth/login" class="btn btn-outline">Log In</a>
+                <a href="/auth/login" class="btn btn-primary">Sign Up Free</a>
+            </div>
+            <button class="hamburger">
+                <i class="fas fa-bars"></i>
+            </button>
+        </nav>
+    </header>
+
+    <!-- Hero Section with 3D Model -->
+    <section class="hero" id="hero">
+        <div id="hero-canvas"></div>
+        <div class="container">
+            <div class="hero-content">
+                <h1>Transform How You Teach & Learn</h1>
+                <p>EduSphere is a next-generation learning platform where interactive content, AI-powered insights, and real-time collaboration converge to create an exceptional educational experience.</p>
+                <div class="hero-buttons">
+                    <a href="#" class="btn btn-primary">Get Started</a>
+                    <a href="#how-it-works" class="btn btn-outline">Learn More</a>
+                </div>
+                <div class="stats-card">
+                    <div class="stat">
+                        <span class="stat-number">10K+</span>
+                        <span class="stat-label">Students</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">500+</span>
+                        <span class="stat-label">Courses</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">250+</span>
+                        <span class="stat-label">Educators</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-title">
+                <h2>Why Choose EduSphere?</h2>
+                <p>Our platform combines cutting-edge technology with intuitive design to create a learning experience that's engaging, accessible, and effective.</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>AI-Enhanced Learning</h3>
+                    <p>Our AI technology automatically generates transcripts, creates summaries, and helps students navigate lengthy video content efficiently.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3>Real-Time Interaction</h3>
+                    <p>Connect instantly with teachers and peers through integrated chat rooms, fostering collaboration and community learning.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-laptop-code"></i>
+                    </div>
+                    <h3>Intuitive Dashboard</h3>
+                    <p>Easily manage your courses, track progress, and access all your learning materials from one centralized, user-friendly interface.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                    </div>
+                    <h3>Educator Tools</h3>
+                    <p>Powerful course creation tools, analytics, and management features designed specifically for teachers and content creators.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h3>Learn Anywhere</h3>
+                    <p>Access your courses on any device with our responsive design and offline viewing capabilities for uninterrupted learning.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Secure & Reliable</h3>
+                    <p>Industry-leading security measures protect your data, while our robust infrastructure ensures consistent, high-quality performance.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works" id="how-it-works">
+        <div class="container">
+            <div class="section-title">
+                <h2>How EduSphere Works</h2>
+                <p>From course creation to interactive learning, our platform simplifies every step of the educational journey.</p>
+            </div>
+            <div class="steps-container">
+                <div class="step">
+                    <div class="step-content">
+                        <div class="step-number">1</div>
+                        <h3>Create & Upload</h3>
+                        <p>Teachers build courses by uploading videos and materials. Our AI automatically generates transcripts and creates interactive elements to enhance the content.</p>
+                        <a href="#" class="btn btn-outline">Learn About Course Creation</a>
+                    </div>
+                    <div class="step-image">
+                        <img src="/api/placeholder/600/400" alt="Course Creation Process">
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-content">
+                        <div class="step-number">2</div>
+                        <h3>Learn Interactively</h3>
+                        <p>Students access course materials with AI-generated transcripts, summaries, and navigation tools that make complex topics more digestible and easy to review.</p>
+                        <a href="#" class="btn btn-outline">Explore Learning Tools</a>
+                    </div>
+                    <div class="step-image">
+                        <img src="/api/placeholder/600/400" alt="Interactive Learning">
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-content">
+                        <div class="step-number">3</div>
+                        <h3>Connect in Real-Time</h3>
+                        <p>Join live discussions with instructors and peers. Ask questions, share insights, and collaborate in a supportive community that enhances your understanding.</p>
+                        <a href="#" class="btn btn-outline">See How Collaboration Works</a>
+                    </div>
+                    <div class="step-image">
+                        <img src="/api/placeholder/600/400" alt="Real-Time Collaboration">
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-content">
+                        <div class="step-number">4</div>
+                        <h3>Track Progress</h3>
+                        <p>Monitor your learning journey with detailed analytics and progress tracking. Set goals, earn achievements, and stay motivated throughout your educational experience.</p>
+                        <a href="#" class="btn btn-outline">View Progress Features</a>
+                    </div>
+                    <div class="step-image">
+                        <img src="/api/placeholder/600/400" alt="Progress Tracking">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials" id="testimonials">
+        <div class="container">
+            <div class="section-title">
+                <h2>What Our Users Say</h2>
+                <p>Discover how EduSphere is transforming the learning experience for students and educators around the world.</p>
+            </div>
+            <div class="testimonial-grid">
+                <div class="testimonial-card">
+                    <p class="quote">EduSphere revolutionized how I teach my computer science courses. The AI transcript feature alone saves me hours of work, and the real-time interaction keeps my students engaged even after class ends.</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">DR</div>
+                        <div>
+                            <div class="author-name">Dr. Rebecca Chen</div>
+                            <div class="author-title">Computer Science Professor</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <p class="quote">As a student working full-time, finding quality education that fits my schedule was challenging. With EduSphere, I can learn at my own pace and still feel connected to my instructors and classmates through real-time discussions.</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">JM</div>
+                        <div>
+                            <div class="author-name">James Miller</div>
+                            <div class="author-title">Working Professional</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <p class="quote">The intuitive design and powerful features make EduSphere perfect for our online academy. We've seen a 40% increase in student completion rates since switching to this platform. The AI tools are a game-changer!</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">SK</div>
+                        <div>
+                            <div class="author-name">Sarah Kim</div>
+                            <div class="author-title">Online Academy Director</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="pricing" id="pricing">
+        <div class="container">
+            <div class="section-title">
+                <h2>Choose Your Plan</h2>
+                <p>Flexible pricing options designed to meet the needs of individual learners, educators, and institutions.</p>
+            </div>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <h3 class="pricing-title">Student</h3>
+                    <p class="pricing-subtitle">Perfect for individual learners</p>
+                    <div class="pricing-price">$9<span class="pricing-period">/month</span></div>
+                    <ul class="pricing-features">
+                        <li class="pricing-feature">Access to all courses</li>
+                        <li class="pricing-feature">AI-generated transcripts</li>
+                        <li class="pricing-feature">Mobile learning</li>
+                        <li class="pricing-feature">Community chat rooms</li>
+                        <li class="pricing-feature">Progress tracking</li>
+                    </ul>
+                    <a href="#" class="pricing-button">Choose Plan</a>
+                </div>
+                <div class="pricing-card featured">
+                    <h3 class="pricing-title">Teacher</h3>
+                    <p class="pricing-subtitle">For educators and content creators</p>
+                    <div class="pricing-price">$29<span class="pricing-period">/month</span></div>
+                    <ul class="pricing-features">
+                        <li class="pricing-feature">Everything in Student plan</li>
+                        <li class="pricing-feature">Course creation tools</li>
+                        <li class="pricing-feature">Unlimited video uploads</li>
+                        <li class="pricing-feature">Student analytics</li>
+                        <li class="pricing-feature">Priority support</li>
+                    </ul>
+                    <a href="#" class="pricing-button">Choose Plan</a>
+                </div>
+                <div class="pricing-card">
+                    <h3 class="pricing-title">Institution</h3>
+                    <p class="pricing-subtitle">For schools and organizations</p>
+                    <div class="pricing-price">$99<span class="pricing-period">/month</span></div>
+                    <ul class="pricing-features">
+                        <li class="pricing-feature">Everything in Teacher plan</li>
+                        <li class="pricing-feature">Multiple teacher accounts</li>
+                        <li class="pricing-feature">Custom branding</li>
+                        <li class="pricing-feature">API access</li>
+                        <li class="pricing-feature">Dedicated account manager</li>
+                    </ul>
+                    <a href="#" class="pricing-button">Choose Plan</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="container">
+            <h2>Ready to Transform Your Learning Experience?</h2>
+            <p>Join thousands of students and educators already using EduSphere to create, learn, and grow together.</p>
+            <div class="cta-form">
+                <input type="email" placeholder="Enter your email">
+                <button>Get Started Free</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="#" class="logo">
+                        <i class="fas fa-graduation-cap logo-icon"></i>
+                        Edu<span>Sphere</span>
+                    </a>
+                    <p>Transforming the way we teach and learn through innovative technology and collaborative education.</p>
+                    <div class="social-links">
+                        <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="social-link"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+                <div class="footer-links">
+                    <h4>Platform</h4>
+                    <ul>
+                        <li><a href="#">Features</a></li>
+                        <li><a href="#">How It Works</a></li>
+                        <li><a href="#">Pricing</a></li>
+                        <li><a href="#">FAQ</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h4>Company</h4>
+                    <ul>
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Careers</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="#">Terms of Service</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Security</a></li>
+                        <li><a href="#">Accessibility</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 EduSphere. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript for animations, 3D model, and interactivity -->
+    <script>
+        // Page loader
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.querySelector('.loader').classList.add('hidden');
+            }, 500);
+        });
+
+        // Sticky header
+        window.addEventListener('scroll', () => {
+            const header = document.querySelector('header');
+            if (window.scrollY > 50) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        });
+
+        // Scroll animations with Intersection Observer
+        const observerOptions = {
+            threshold: 0.25,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const appearOnScroll = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                entry.target.classList.add('active');
+                observer.unobserve(entry.target);
+            });
+        }, observerOptions);
+
+        // Apply to all steps
+        document.querySelectorAll('.step').forEach(step => {
+            appearOnScroll.observe(step);
+        });
+
+        // Apply to all cards with animation classes
+        document.querySelectorAll('.fade-in, .scale-in').forEach(el => {
+            appearOnScroll.observe(el);
+        });
+
+        // Feature cards animation
+        document.querySelectorAll('.feature-card').forEach((card, index) => {
+            card.classList.add('fade-in');
+            appearOnScroll.observe(card);
+        });
+
+        // Testimonial cards animation
+        document.querySelectorAll('.testimonial-card').forEach((card, index) => {
+            card.classList.add('scale-in');
+            appearOnScroll.observe(card);
+        });
+
+        // Pricing cards animation
+        document.querySelectorAll('.pricing-card').forEach((card, index) => {
+            card.classList.add('fade-in');
+            appearOnScroll.observe(card);
+        });
+
+        // 3D Model animation with Three.js
+        function initThreeScene() {
+            // Create scene
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / 2 / window.innerHeight, 0.1, 1000);
+            
+            // Create renderer
+            const renderer = new THREE.WebGLRenderer({ 
+                antialias: true,
+                alpha: true 
+            });
+            renderer.setSize(window.innerWidth / 2, window.innerHeight);
+            renderer.setClearColor(0x000000, 0);
+            
+            document.getElementById('hero-canvas').appendChild(renderer.domElement);
+            
+            // Add ambient light
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            
+            // Add directional light
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            scene.add(directionalLight);
+            
+            // Create education-themed objects
+            const geometry = new THREE.TorusKnotGeometry(1, 0.3, 100, 16);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0x4A56E2,
+                emissive: 0x4A56E2,
+                emissiveIntensity: 0.2,
+                specular: 0xffffff,
+                shininess: 100
+            });
+            
+            const torusKnot = new THREE.Mesh(geometry, material);
+            scene.add(torusKnot);
+            
+            // Create floating book
+            const bookGeometry = new THREE.BoxGeometry(0.8, 1, 0.1);
+            const bookMaterial = new THREE.MeshPhongMaterial({ color: 0xFF6B6B });
+            const book = new THREE.Mesh(bookGeometry, bookMaterial);
+            book.position.set(-1.5, 0, 0);
+            scene.add(book);
+            
+            // Create floating sphere (representing a globe)
+            const sphereGeometry = new THREE.SphereGeometry(0.6, 32, 32);
+            const sphereMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x6C63FF,
+                emissive: 0x6C63FF,
+                emissiveIntensity: 0.2
+            });
+            const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+            sphere.position.set(1.5, -0.5, 0);
+            scene.add(sphere);
+            
+            // Create floating graduation cap
+            const capGeometry = new THREE.ConeGeometry(0.5, 0.2, 4);
+            const capMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
+            const cap = new THREE.Mesh(capGeometry, capMaterial);
+            cap.rotation.x = Math.PI;
+            cap.position.set(0, 1.5, 0);
+            scene.add(cap);
+            
+            // Position camera
+            camera.position.z = 5;
+            
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                // Rotate objects
+                torusKnot.rotation.x += 0.01;
+                torusKnot.rotation.y += 0.01;
+                
+                book.rotation.y += 0.01;
+                book.position.y = Math.sin(Date.now() * 0.001) * 0.2;
+                
+                sphere.rotation.y += 0.005;
+                sphere.position.y = Math.sin(Date.now() * 0.001 + 2) * 0.2;
+                
+                cap.rotation.z += 0.01;
+                cap.position.y = 1.5 + Math.sin(Date.now() * 0.001 + 4) * 0.2;
+                
+                renderer.render(scene, camera);
+            }
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / 2 / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth / 2, window.innerHeight);
+            });
+            
+            // Start animation
+            animate();
+        }
+        
+        // Initialize Three.js scene when the page is loaded
+        window.addEventListener('load', initThreeScene);
+
+        // GSAP animations for enhanced scrolling effects
+        document.addEventListener('DOMContentLoaded', () => {
+            // Register ScrollTrigger plugin
+            gsap.registerPlugin(ScrollTrigger);
+            
+            // Hero section animation
+            gsap.from('.hero-content', {
+                opacity: 0,
+                y: 50,
+                duration: 1,
+                ease: 'power3.out'
+            });
+            
+            // Stats card animation
+            gsap.from('.stats-card', {
+                opacity: 0,
+                y: 30,
+                duration: 0.8,
+                delay: 0.5,
+                ease: 'back.out(1.7)'
+            });
+            
+            // Section titles animation
+            gsap.utils.toArray('.section-title').forEach(title => {
+                gsap.from(title, {
+                    scrollTrigger: {
+                        trigger: title,
+                        start: 'top 80%'
+                    },
+                    opacity: 0,
+                    y: 50,
+                    duration: 0.8,
+                    ease: 'power3.out'
+                });
+            });
+            
+            // CTA section parallax effect
+            gsap.to('.cta::before', {
+                scrollTrigger: {
+                    trigger: '.cta',
+                    start: 'top bottom',
+                    end: 'bottom top',
+                    scrub: true
+                },
+                y: '30%',
+                ease: 'none'
+            });
+        });
+    </script>
+</body>
+</html>

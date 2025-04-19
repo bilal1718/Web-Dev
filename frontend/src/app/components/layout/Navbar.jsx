@@ -7,10 +7,7 @@ import { FaBars, FaTimes, FaSearch, FaBell, FaUserCircle } from 'react-icons/fa'
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Demo state, replace with auth context later
-
-  // Toggle login for demo purposes
-  const toggleLogin = () => setIsLoggedIn(!isLoggedIn);
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // Replace with actual auth context
 
   return (
     <nav className="bg-white shadow-md fixed w-full z-50">
@@ -67,21 +64,18 @@ export default function Navbar() {
                   />
                   <span className="ml-2">My Account</span>
                 </Link>
-                <button onClick={toggleLogin} className="btn-outline">
+                <Link href="/auth/logout" className="btn-outline">
                   Log Out
-                </button>
+                </Link>
               </div>
             ) : (
               <div className="flex items-center space-x-4">
                 <Link href="/auth/login" className="text-gray-700 hover:text-blue-600">
                   Log In
                 </Link>
-                <Link href="/auth/login" className="btn-primary">
+                <Link href="/auth/register" className="btn-primary">
                   Sign Up
                 </Link>
-                <button onClick={toggleLogin} className="text-xs text-gray-500 hover:text-gray-700">
-                  (Demo Toggle)
-                </button>
               </div>
             )}
           </div>
@@ -167,9 +161,9 @@ export default function Navbar() {
                     3
                   </span>
                 </Link>
-                <button onClick={toggleLogin} className="btn-outline w-full mt-2">
+                <Link href="/auth/logout" className="btn-outline w-full mt-2">
                   Log Out
-                </button>
+                </Link>
               </>
             ) : (
               <div className="flex flex-col space-y-2 pt-2 border-t border-gray-200">
@@ -187,9 +181,6 @@ export default function Navbar() {
                 >
                   Sign Up
                 </Link>
-                <button onClick={toggleLogin} className="text-xs text-gray-500 hover:text-gray-700">
-                  (Demo Toggle)
-                </button>
               </div>
             )}
           </div>

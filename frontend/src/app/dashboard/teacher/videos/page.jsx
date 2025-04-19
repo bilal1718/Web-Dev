@@ -2,12 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import { 
   FaUpload, FaPlay, FaSearch,
   FaFilter, FaSort, FaChevronDown, FaEye, FaVideo,
-  FaGripLines, FaTimes, FaSave, FaCheckCircle
+  FaGripLines, FaTimes, FaSave, FaCheckCircle, FaSpinner, FaUser
 } from 'react-icons/fa';
 import {
   DndContext,
@@ -30,74 +29,36 @@ import { restrictToParentElement } from '@dnd-kit/modifiers';
 import { CSS } from '@dnd-kit/utilities';
 import TeacherLayout from '../../../components/layout/TeacherLayout';
 import { motion, AnimatePresence } from 'framer-motion';
+import axios from 'axios';
 
-// Current user and date
-const currentUser = "ZainJ5";
-const currentDate = "2025-04-19";
+// API base URL
+const API_URL = 'http://localhost:5000/api';
 
-// Mock video data (would come from API in real app)
-const mockVideos = [
-  {
-    id: 1,
-    title: 'Introduction to Variables',
-    description: 'Learn about variables and data types in Python',
-    thumbnail: '/images/courses/python.jpg',
-    courseName: 'Introduction to Python Programming',
-    courseId: 1,
-    duration: '14:25',
-    views: 342,
-    date: '2025-04-02',
-    order: 1
-  },
-  {
-    id: 2,
-    title: 'Functions and Parameters',
-    description: 'Understanding how to create and use functions',
-    thumbnail: '/images/courses/python.jpg',
-    courseName: 'Introduction to Python Programming',
-    courseId: 1,
-    duration: '18:10',
-    views: 286,
-    date: '2025-04-05',
-    order: 2
-  },
-  {
-    id: 3,
-    title: 'Arrays vs Linked Lists',
-    description: 'Compare the two fundamental data structures',
-    thumbnail: '/images/courses/data-structures.jpg',
-    courseName: 'Data Structures and Algorithms',
-    courseId: 2,
-    duration: '22:30',
-    views: 198,
-    date: '2025-04-08',
-    order: 1
-  },
-  {
-    id: 4,
-    title: 'Introduction to Neural Networks',
-    description: 'Learn the basics of neural networks and deep learning',
-    thumbnail: '/images/courses/ml-basics.jpg',
-    courseName: 'Machine Learning Fundamentals',
-    courseId: 3,
-    duration: '26:45',
-    views: 243,
-    date: '2025-04-10',
-    order: 1
-  },
-  {
-    id: 5,
-    title: 'Modern CSS Techniques',
-    description: 'Explore advanced CSS features and techniques',
-    thumbnail: '/images/courses/web-dev.jpg',
-    courseName: 'Advanced Web Development',
-    courseId: 4,
-    duration: '19:18',
-    views: 127,
-    date: '2025-04-15',
-    order: 1
+// Get cookie function
+const getCookie = (name) => {
+  if (typeof document === 'undefined') return null;
+  
+  const cookies = document.cookie.split(';');
+  for (let i = 0; i < cookies.length; i++) {
+    const cookie = cookies[i].trim();
+    if (cookie.startsWith(name + '=')) {
+      return cookie.substring(name.length + 1);
+    }
   }
-];
+  return null;
+};
+
+// Set up axios interceptor to add authorization header
+axios.interceptors.request.use(
+  (config) => {
+    const token = getCookie('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 // Skeleton loader component
 const SkeletonLoader = () => (
@@ -129,7 +90,7 @@ const SortableVideoCard = ({ video }) => {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: video.id });
+  } = useSortable({ id: video._id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -151,19 +112,24 @@ const SortableVideoCard = ({ video }) => {
       }`}
     >
       <div className="relative aspect-video">
-        <Image
-          src={video.thumbnail}
-          alt={video.title}
-          layout="fill"
-          objectFit="cover"
-        />
+        {video.thumbnail ? (
+          <img
+            src={video.thumbnail || ''}
+            alt={video.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+            <FaVideo className="text-gray-400" size={24} />
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end">
           <div className="p-4 text-white w-full">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-medium">{video.duration}</span>
+              <span className="text-xs font-medium">{video.duration || 'N/A'}</span>
               <span className="text-xs flex items-center">
                 <FaEye className="mr-1" size={12} />
-                {video.views}
+                {video.views || 0}
               </span>
             </div>
           </div>
@@ -177,10 +143,10 @@ const SortableVideoCard = ({ video }) => {
       
       <div className="p-4">
         <h3 className="font-medium text-gray-900 mb-1 line-clamp-1">{video.title}</h3>
-        <p className="text-xs text-gray-500 mb-2 line-clamp-2">{video.description}</p>
+        <p className="text-xs text-gray-500 mb-2 line-clamp-2">{video.description || 'No description'}</p>
         <div className="flex items-center justify-between">
           <span className="text-xs text-gray-500">{video.courseName}</span>
-          <span className="text-xs text-gray-400">{video.date}</span>
+          <span className="text-xs text-gray-400">{new Date(video.createdAt || Date.now()).toLocaleDateString()}</span>
         </div>
       </div>
       
@@ -203,7 +169,7 @@ const SortableTableRow = ({ video }) => {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: video.id });
+  } = useSortable({ id: video._id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -225,43 +191,102 @@ const SortableTableRow = ({ video }) => {
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center">
-          <div className="relative h-12 w-20 flex-shrink-0 rounded overflow-hidden">
-            <Image
-              src={video.thumbnail}
-              alt={video.title}
-              layout="fill"
-              objectFit="cover"
-            />
+          <div className="relative h-12 w-20 flex-shrink-0 rounded overflow-hidden bg-gray-200">
+            {video.thumbnail ? (
+              <img
+                src={video.thumbnail}
+                alt={video.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <FaVideo className="text-gray-400" size={16} />
+              </div>
+            )}
             <div className="absolute inset-0 flex items-center justify-center hover:bg-black hover:bg-opacity-20 transition-colors">
               <FaPlay className="text-white opacity-70" size={16} />
             </div>
           </div>
           <div className="ml-4">
             <div className="text-sm font-medium text-gray-900">{video.title}</div>
-            <div className="text-xs text-gray-500 line-clamp-1">{video.description}</div>
+            <div className="text-xs text-gray-500 line-clamp-1">{video.description || 'No description'}</div>
           </div>
         </div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="text-sm text-gray-900">{video.courseName}</div>
-        <div className="text-xs text-gray-500">{video.date}</div>
+        <div className="text-xs text-gray-500">{new Date(video.createdAt || Date.now()).toLocaleDateString()}</div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
-        <div className="text-sm text-gray-900">{video.duration}</div>
+        <div className="text-sm text-gray-900">{video.duration || 'N/A'}</div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="text-sm text-gray-900 flex items-center">
           <FaEye className="text-gray-400 mr-1" size={14} />
-          {video.views}
+          {video.views || 0}
         </div>
       </td>
     </tr>
   );
 };
 
+// Draggable Video Card for the overlay
+const VideoCard = ({ video, isDragging }) => (
+  <div className={`bg-white rounded-xl shadow-sm overflow-hidden transition-all ${
+    isDragging ? 'ring-2 ring-blue-500 shadow-lg' : 'hover:shadow-md'
+  }`}>
+    <div className="relative aspect-video">
+      {video.thumbnail ? (
+        <img
+          src={video.thumbnail}
+          alt={video.title}
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+          <FaVideo className="text-gray-400" size={24} />
+        </div>
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end">
+        <div className="p-4 text-white w-full">
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-medium">{video.duration || 'N/A'}</span>
+            <span className="text-xs flex items-center">
+              <FaEye className="mr-1" size={12} />
+              {video.views || 0}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center hover:bg-black/40 transition-colors opacity-0 hover:opacity-100">
+        <button className="bg-white rounded-full p-3 transform hover:scale-110 transition-transform">
+          <FaPlay className="text-blue-600" />
+        </button>
+      </div>
+    </div>
+    
+    <div className="p-4">
+      <h3 className="font-medium text-gray-900 mb-1 line-clamp-1">{video.title}</h3>
+      <p className="text-xs text-gray-500 mb-2 line-clamp-2">{video.description || 'No description'}</p>
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-gray-500">{video.courseName}</span>
+        <span className="text-xs text-gray-400">{new Date(video.createdAt || Date.now()).toLocaleDateString()}</span>
+      </div>
+    </div>
+    
+    <div className="border-t border-gray-100 px-4 py-3 bg-gray-50 flex justify-center items-center">
+      <div className="flex items-center text-gray-400">
+        <FaGripLines className="cursor-move" title="Drag to reorder" />
+        <span className="ml-2 text-sm">Drag to reorder</span>
+      </div>
+    </div>
+  </div>
+);
+
 export default function VideosPage() {
   const router = useRouter();
   const [videos, setVideos] = useState([]);
+  const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [courseFilter, setCourseFilter] = useState('');
@@ -273,6 +298,9 @@ export default function VideosPage() {
   const [activeId, setActiveId] = useState(null);
   const [orderSaved, setOrderSaved] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [currentCourseId, setCurrentCourseId] = useState(null);
+  const [currentDateTime] = useState('2025-04-19 09:53:34');
+  const [currentUser] = useState('ZainJ5');
   
   // Configure DnD sensors for mouse, touch and keyboard
   const sensors = useSensors(
@@ -286,22 +314,63 @@ export default function VideosPage() {
     })
   );
 
-  // Extract unique courses from videos
-  const courses = [...new Set(mockVideos.map(video => video.courseId))].map(courseId => {
-    const video = mockVideos.find(v => v.courseId === courseId);
-    return {
-      id: courseId,
-      name: video.courseName
-    };
-  });
-
+  // Fetch videos and courses
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setVideos(mockVideos);
-      setLoading(false);
-    }, 1000);
-  }, []);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch courses
+        const coursesResponse = await axios.get(`${API_URL}/courses/teacher`);
+        setCourses(coursesResponse.data);
+        
+        // Fetch videos (assuming an endpoint exists to fetch teacher's videos)
+        const videosResponse = await axios.get(`${API_URL}/videos/teacher`);
+        
+        // Process the video data to include course names
+        const processedVideos = videosResponse.data.map(video => {
+          const course = coursesResponse.data.find(c => c._id === video.course);
+          return {
+            ...video,
+            courseName: course ? course.title : 'Unknown Course'
+          };
+        });
+        
+        setVideos(processedVideos);
+        
+        // If filtering by course, set the currentCourseId
+        if (courseFilter) {
+          setCurrentCourseId(courseFilter);
+        } else if (processedVideos.length > 0) {
+          // Group videos by course to find the course with most videos
+          const courseGroups = processedVideos.reduce((acc, video) => {
+            if (!acc[video.course]) acc[video.course] = 0;
+            acc[video.course]++;
+            return acc;
+          }, {});
+          
+          // Find course with the most videos
+          let maxCount = 0;
+          let mostPopularCourseId = null;
+          
+          Object.entries(courseGroups).forEach(([courseId, count]) => {
+            if (count > maxCount) {
+              maxCount = count;
+              mostPopularCourseId = courseId;
+            }
+          });
+          
+          setCurrentCourseId(mostPopularCourseId);
+        }
+      } catch (err) {
+        console.error('Error fetching data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [courseFilter]);
 
   useEffect(() => {
     // Disable drag and drop when filters are applied
@@ -328,8 +397,8 @@ export default function VideosPage() {
     if (over && active.id !== over.id) {
       setVideos((items) => {
         // Find the indexes of the source and destination items
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
+        const oldIndex = items.findIndex((item) => item._id === active.id);
+        const newIndex = items.findIndex((item) => item._id === over.id);
         
         // Move the item in the array
         const newItems = arrayMove(items, oldIndex, newIndex);
@@ -348,15 +417,34 @@ export default function VideosPage() {
     setActiveId(null);
   }, []);
 
-  const saveCustomOrder = () => {
-    // In a real app, this would call an API to save the order
-    setSortBy('order');
-    setSortOrder('asc');
-    setOrderSaved(true);
-    setShowSuccessMessage(true);
-    
-    // Update localStorage or call API to save the custom order
-    console.log('Custom order saved', videos.map(v => ({ id: v.id, order: v.order })));
+  const saveCustomOrder = async () => {
+    try {
+      if (!currentCourseId) {
+        alert('Please select a course to save the custom order');
+        return;
+      }
+      
+      // Get IDs in the new order from the filtered and course-specific videos
+      const orderedIds = filteredVideos
+        .filter(video => video.course === currentCourseId)
+        .map(video => video._id);
+      
+      // Call API to save the order
+      await axios.patch(`${API_URL}/videos/reorder/${currentCourseId}`, {
+        reorderedIds: orderedIds
+      });
+      
+      // Update UI state
+      setSortBy('order');
+      setSortOrder('asc');
+      setOrderSaved(true);
+      setShowSuccessMessage(true);
+      
+      console.log('Custom order saved', orderedIds);
+    } catch (err) {
+      console.error('Error saving video order:', err);
+      alert('Failed to save custom order. Please try again.');
+    }
   };
 
   const clearFilters = () => {
@@ -367,8 +455,8 @@ export default function VideosPage() {
   // Filter and sort videos
   const filteredVideos = videos.filter(video => {
     const matchesSearch = video.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         video.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCourse = courseFilter ? video.courseId.toString() === courseFilter : true;
+                         (video.description && video.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesCourse = courseFilter ? video.course === courseFilter : true;
     
     return matchesSearch && matchesCourse;
   }).sort((a, b) => {
@@ -377,17 +465,17 @@ export default function VideosPage() {
         ? a.title.localeCompare(b.title) 
         : b.title.localeCompare(a.title);
     } else if (sortBy === 'views') {
-      return sortOrder === 'asc' ? a.views - b.views : b.views - a.views;
+      return sortOrder === 'asc' ? (a.views || 0) - (b.views || 0) : (b.views || 0) - (a.views || 0);
     } else if (sortBy === 'duration') {
       return sortOrder === 'asc' 
-        ? a.duration.localeCompare(b.duration) 
-        : b.duration.localeCompare(a.duration);
+        ? (a.duration || '').localeCompare(b.duration || '') 
+        : (b.duration || '').localeCompare(a.duration || '');
     } else if (sortBy === 'order') {
-      return sortOrder === 'asc' ? a.order - b.order : b.order - a.order;
+      return sortOrder === 'asc' ? (a.order || 0) - (b.order || 0) : (b.order || 0) - (a.order || 0);
     } else { // date
       return sortOrder === 'asc' 
-        ? new Date(a.date) - new Date(b.date) 
-        : new Date(b.date) - new Date(a.date);
+        ? new Date(a.createdAt || 0) - new Date(b.createdAt || 0) 
+        : new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     }
   });
 
@@ -406,11 +494,13 @@ export default function VideosPage() {
         <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
           <button
             onClick={saveCustomOrder}
-            disabled={orderSaved}
+            disabled={orderSaved || filteredVideos.length <= 1 || !currentCourseId}
             className={`px-4 py-2 rounded-lg border transition-colors flex items-center justify-center ${
               sortBy === 'order' && orderSaved
                 ? 'bg-green-50 border-green-300 text-green-700' 
-                : 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
+                : filteredVideos.length <= 1 || !currentCourseId
+                  ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
             }`}
           >
             {sortBy === 'order' && orderSaved ? (
@@ -518,8 +608,8 @@ export default function VideosPage() {
                       >
                         <option value="">All Courses</option>
                         {courses.map(course => (
-                          <option key={course.id} value={course.id.toString()}>
-                            {course.name}
+                          <option key={course._id} value={course._id}>
+                            {course.title}
                           </option>
                         ))}
                       </select>
@@ -590,7 +680,7 @@ export default function VideosPage() {
             
             {courseFilter && (
               <div className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-50 text-blue-700">
-                <span>Course: {courses.find(c => c.id.toString() === courseFilter)?.name}</span>
+                <span>Course: {courses.find(c => c._id === courseFilter)?.title}</span>
                 <button 
                   onClick={() => setCourseFilter('')}
                   className="ml-2 text-blue-500 hover:text-blue-700"
@@ -634,14 +724,14 @@ export default function VideosPage() {
         >
           {viewMode === 'grid' ? (
             <SortableContext 
-              items={filteredVideos.map(video => video.id)} 
+              items={filteredVideos.map(video => video._id)} 
               strategy={horizontalListSortingStrategy}
               disabled={dragDisabled}
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredVideos.map((video) => (
                   <SortableVideoCard 
-                    key={video.id}
+                    key={video._id}
                     video={video}
                   />
                 ))}
@@ -670,14 +760,14 @@ export default function VideosPage() {
                   </tr>
                 </thead>
                 <SortableContext 
-                  items={filteredVideos.map(video => video.id)}
+                  items={filteredVideos.map(video => video._id)}
                   strategy={verticalListSortingStrategy}
                   disabled={dragDisabled}
                 >
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredVideos.map((video) => (
                       <SortableTableRow 
-                        key={video.id}
+                        key={video._id}
                         video={video}
                       />
                     ))}
@@ -692,7 +782,7 @@ export default function VideosPage() {
             {activeId ? (
               viewMode === 'grid' ? (
                 <VideoCard 
-                  video={videos.find(v => v.id === activeId)}
+                  video={videos.find(v => v._id === activeId)}
                   isDragging={true}
                 />
               ) : (
@@ -702,8 +792,8 @@ export default function VideosPage() {
                       <FaVideo />
                     </div>
                     <div>
-                      <div className="font-medium">{videos.find(v => v.id === activeId).title}</div>
-                      <div className="text-sm text-gray-500">{videos.find(v => v.id === activeId).courseName}</div>
+                      <div className="font-medium">{videos.find(v => v._id === activeId).title}</div>
+                      <div className="text-sm text-gray-500">{videos.find(v => v._id === activeId).courseName}</div>
                     </div>
                   </div>
                 </div>
@@ -740,56 +830,8 @@ export default function VideosPage() {
 
       {/* User and date info */}
       <div className="mt-6 text-sm text-gray-500 text-right">
-        Last modified by: {currentUser} on {currentDate}
+        {currentDateTime} • {currentUser}
       </div>
     </TeacherLayout>
   );
 }
-
-// Add this VideoCard component for the DragOverlay
-const VideoCard = ({ video, isDragging }) => (
-  <div className={`bg-white rounded-xl shadow-sm overflow-hidden transition-all ${
-    isDragging ? 'ring-2 ring-blue-500 shadow-lg' : 'hover:shadow-md'
-  }`}>
-    <div className="relative aspect-video">
-      <Image
-        src={video.thumbnail}
-        alt={video.title}
-        layout="fill"
-        objectFit="cover"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end">
-        <div className="p-4 text-white w-full">
-          <div className="flex justify-between items-center">
-            <span className="text-xs font-medium">{video.duration}</span>
-            <span className="text-xs flex items-center">
-              <FaEye className="mr-1" size={12} />
-              {video.views}
-            </span>
-          </div>
-        </div>
-      </div>
-      <div className="absolute inset-0 flex items-center justify-center hover:bg-black/40 transition-colors opacity-0 hover:opacity-100">
-        <button className="bg-white rounded-full p-3 transform hover:scale-110 transition-transform">
-          <FaPlay className="text-blue-600" />
-        </button>
-      </div>
-    </div>
-    
-    <div className="p-4">
-      <h3 className="font-medium text-gray-900 mb-1 line-clamp-1">{video.title}</h3>
-      <p className="text-xs text-gray-500 mb-2 line-clamp-2">{video.description}</p>
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">{video.courseName}</span>
-        <span className="text-xs text-gray-400">{video.date}</span>
-      </div>
-    </div>
-    
-    <div className="border-t border-gray-100 px-4 py-3 bg-gray-50 flex justify-center items-center">
-      <div className="flex items-center text-gray-400">
-        <FaGripLines className="cursor-move" title="Drag to reorder" />
-        <span className="ml-2 text-sm">Drag to reorder</span>
-      </div>
-    </div>
-  </div>
-);

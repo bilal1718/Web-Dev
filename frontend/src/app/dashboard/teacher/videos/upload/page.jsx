@@ -9,30 +9,35 @@ import {
   FaFileVideo, FaPlay
 } from 'react-icons/fa';
 import TeacherLayout from '../../../../components/layout/TeacherLayout';
+import axios from 'axios';
 
-// This would be fetched from the API in a real application
-const teacherCourses = [
-  {
-    id: 1,
-    title: 'Introduction to Python Programming',
-    thumbnail: '/images/courses/python.jpg',
+const API_URL = 'http://localhost:5000/api';
+
+// Get cookie function
+const getCookie = (name) => {
+  if (typeof document === 'undefined') return null;
+  
+  const cookies = document.cookie.split(';');
+  for (let i = 0; i < cookies.length; i++) {
+    const cookie = cookies[i].trim();
+    if (cookie.startsWith(name + '=')) {
+      return cookie.substring(name.length + 1);
+    }
+  }
+  return null;
+};
+
+// Set up axios interceptor to add authorization header
+axios.interceptors.request.use(
+  (config) => {
+    const token = getCookie('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
   },
-  {
-    id: 2,
-    title: 'Data Structures and Algorithms',
-    thumbnail: '/images/courses/data-structures.jpg',
-  },
-  {
-    id: 3,
-    title: 'Machine Learning Fundamentals',
-    thumbnail: '/images/courses/ml-basics.jpg',
-  },
-  {
-    id: 4,
-    title: 'Advanced Web Development',
-    thumbnail: '/images/courses/web-dev.jpg',
-  },
-];
+  (error) => Promise.reject(error)
+);
 
 export default function VideoUploadPage() {
   const router = useRouter();
@@ -45,27 +50,39 @@ export default function VideoUploadPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errors, setErrors] = useState({});
   const [recentUploads, setRecentUploads] = useState([]);
+  const [courses, setCourses] = useState([]);
+  // Set exact current date/time as specified
+  const [currentDateTime] = useState('2025-04-19 10:00:59');
+  // Set exact user login as specified
+  const [currentUser] = useState('ZainJ5');
+  const [generatingTranscript, setGeneratingTranscript] = useState(false);
+  const [transcriptError, setTranscriptError] = useState(null);
 
   useEffect(() => {
-    // Mock recent uploads data - would come from API in real app
-    setRecentUploads([
-      {
-        id: 1,
-        title: 'Introduction to Functions',
-        courseName: 'Introduction to Python Programming',
-        thumbnail: '/images/courses/python.jpg',
-        duration: '12:05',
-        uploadDate: '2025-04-18'
-      },
-      {
-        id: 2,
-        title: 'Arrays and Linked Lists',
-        courseName: 'Data Structures and Algorithms',
-        thumbnail: '/images/courses/data-structures.jpg',
-        duration: '18:23',
-        uploadDate: '2025-04-15'
+    // Fetch courses for the dropdown using the correct API endpoint
+    const fetchCourses = async () => {
+      try {
+        // Using /api/courses/my endpoint to get instructor's courses
+        const response = await axios.get(`${API_URL}/courses/my`);
+        setCourses(response.data);
+      } catch (err) {
+        console.error('Error fetching courses:', err);
       }
-    ]);
+    };
+
+    // Fetch recent uploads
+    const fetchRecentUploads = async () => {
+      try {
+        // This assumes you have a GET /api/videos endpoint that can filter by recent
+        const response = await axios.get(`${API_URL}/videos?limit=2&sort=createdAt:desc`);
+        setRecentUploads(response.data);
+      } catch (err) {
+        console.error('Error fetching recent uploads:', err);
+      }
+    };
+
+    fetchCourses();
+    fetchRecentUploads();
   }, []);
 
   const handleVideoChange = (e) => {
@@ -98,7 +115,7 @@ export default function VideoUploadPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -108,40 +125,87 @@ export default function VideoUploadPage() {
     setUploadStatus('uploading');
     setUploadProgress(0);
     
-    // Simulate file upload with progress
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setUploadStatus('success');
-          
-          // Add the newly uploaded video to recent uploads
-          const course = teacherCourses.find(c => c.id.toString() === selectedCourse);
-          const newUpload = {
-            id: Date.now(),
-            title: title,
-            courseName: course ? course.title : 'Unknown Course',
-            thumbnail: course ? course.thumbnail : '/images/placeholder.jpg',
-            duration: '00:00', // This would be determined by the server
-            uploadDate: new Date().toISOString().split('T')[0]
-          };
-          
-          setRecentUploads(prev => [newUpload, ...prev]);
-          
-          // Reset form after successful upload
-          setTimeout(() => {
-            setTitle('');
-            setDescription('');
-            setVideoFile(null);
-            setPreviewUrl('');
-            setSelectedCourse('');
-          }, 2000);
-          
-          return 100;
+    // Create form data for file upload
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('description', description);
+    formData.append('video', videoFile);
+    if (description) formData.append('description', description);
+    formData.append('order', 0); // Default to end of list
+    
+    try {
+      // Set up progress tracking
+      const progressInterval = setInterval(() => {
+        setUploadProgress((prev) => {
+          // Simulate progress up to 90% (actual completion will be set by the response)
+          return prev < 90 ? prev + 5 : prev;
+        });
+      }, 500);
+      
+      // Call the upload API endpoint
+      const response = await axios.post(
+        `${API_URL}/videos/upload/${selectedCourse}`, 
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         }
-        return prev + 5;
-      });
-    }, 200);
+      );
+      
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      setUploadStatus('success');
+      
+      // Ask if user wants to generate transcript
+      const generateTranscriptConfirm = window.confirm(
+        'Video uploaded successfully! Would you like to generate an AI transcript? This might take a few minutes.'
+      );
+      
+      if (generateTranscriptConfirm) {
+        await generateTranscript(response.data._id);
+      }
+      
+      // Add the newly uploaded video to recent uploads
+      const course = courses.find(c => c._id === selectedCourse);
+      const newUpload = {
+        ...response.data,
+        courseName: course ? course.title : 'Unknown Course',
+      };
+      
+      setRecentUploads(prev => [newUpload, ...prev]);
+      
+      // Reset form after successful upload
+      setTimeout(() => {
+        setTitle('');
+        setDescription('');
+        setVideoFile(null);
+        setPreviewUrl('');
+        setSelectedCourse('');
+        // Redirect to videos page
+        router.push('/dashboard/teacher/videos');
+      }, 2000);
+    } catch (err) {
+      clearInterval(progressInterval);
+      setUploadStatus('error');
+      console.error('Upload failed:', err);
+    }
+  };
+
+  const generateTranscript = async (videoId) => {
+    try {
+      setGeneratingTranscript(true);
+      setTranscriptError(null);
+      
+      await axios.post(`${API_URL}/videos/transcribe/${videoId}`);
+      
+      alert('Transcript generation has started! It may take a few minutes to complete.');
+    } catch (err) {
+      console.error('Error generating transcript:', err);
+      setTranscriptError('Failed to generate transcript. Please try again later.');
+    } finally {
+      setGeneratingTranscript(false);
+    }
   };
 
   const cancelUpload = () => {
@@ -179,8 +243,8 @@ export default function VideoUploadPage() {
                   className={`w-full px-3 py-2 border ${errors.course ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 >
                   <option value="">Select a course</option>
-                  {teacherCourses.map(course => (
-                    <option key={course.id} value={course.id}>{course.title}</option>
+                  {courses.map(course => (
+                    <option key={course._id} value={course._id}>{course.title}</option>
                   ))}
                 </select>
                 {errors.course && <p className="text-red-500 text-sm mt-1">{errors.course}</p>}
@@ -272,9 +336,9 @@ export default function VideoUploadPage() {
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  disabled={uploadStatus === 'uploading'}
+                  disabled={uploadStatus === 'uploading' || generatingTranscript}
                   className={`px-6 py-3 bg-blue-600 text-white rounded-lg flex items-center ${
-                    uploadStatus === 'uploading' ? 'opacity-75 cursor-not-allowed' : 'hover:bg-blue-700'
+                    uploadStatus === 'uploading' || generatingTranscript ? 'opacity-75 cursor-not-allowed' : 'hover:bg-blue-700'
                   }`}
                 >
                   {uploadStatus === 'uploading' ? (
@@ -286,6 +350,11 @@ export default function VideoUploadPage() {
                     <>
                       <FaCheck className="mr-2" />
                       Upload Complete!
+                    </>
+                  ) : generatingTranscript ? (
+                    <>
+                      <FaSpinner className="animate-spin mr-2" />
+                      Generating Transcript...
                     </>
                   ) : (
                     <>
@@ -326,6 +395,16 @@ export default function VideoUploadPage() {
                   </div>
                 </div>
               )}
+              
+              {transcriptError && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start">
+                  <FaExclamationTriangle className="text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-red-800 font-medium">Transcript generation failed</p>
+                    <p className="text-sm text-red-600">{transcriptError}</p>
+                  </div>
+                </div>
+              )}
             </form>
           </div>
         </div>
@@ -339,25 +418,30 @@ export default function VideoUploadPage() {
             {recentUploads.length > 0 ? (
               <div className="space-y-4">
                 {recentUploads.map(video => (
-                  <div key={video.id} className="flex items-start border-b border-gray-100 pb-4 last:border-b-0 last:pb-0">
-                    <div className="relative w-20 h-12 rounded-md overflow-hidden flex-shrink-0">
-                      <Image
-                        src={video.thumbnail}
-                        alt={video.title}
-                        layout="fill"
-                        objectFit="cover"
-                      />
+                  <div key={video._id} className="flex items-start border-b border-gray-100 pb-4 last:border-b-0 last:pb-0">
+                    <div className="relative w-20 h-12 rounded-md overflow-hidden flex-shrink-0 bg-gray-200">
+                      {video.thumbnail ? (
+                        <img 
+                          src={video.thumbnail} 
+                          alt={video.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <FaVideo className="text-gray-400" size={16} />
+                        </div>
+                      )}
                       <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 hover:bg-opacity-10 transition-all">
                         <FaPlay className="text-white" size={12} />
                       </div>
                       <div className="absolute bottom-0 right-0 bg-black bg-opacity-70 text-white text-xs px-1">
-                        {video.duration}
+                        {video.duration || "N/A"}
                       </div>
                     </div>
                     <div className="ml-3 flex-1">
                       <h3 className="text-sm font-medium text-gray-800 line-clamp-1">{video.title}</h3>
                       <p className="text-xs text-gray-500">{video.courseName}</p>
-                      <p className="text-xs text-gray-400">{video.uploadDate}</p>
+                      <p className="text-xs text-gray-400">{new Date(video.createdAt || Date.now()).toLocaleDateString()}</p>
                     </div>
                   </div>
                 ))}
@@ -377,6 +461,10 @@ export default function VideoUploadPage() {
               <li>• Add captions to make your content accessible</li>
               <li>• Use good lighting and clear audio</li>
             </ul>
+          </div>
+          
+          <div className="text-xs text-gray-500 text-right">
+            {currentDateTime} • {currentUser}
           </div>
         </div>
       </div>

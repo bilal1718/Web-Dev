@@ -59,11 +59,10 @@ export default function StudentLayout({ children }) {
   // Navigation items
   const navItems = [
     { name: 'Dashboard', path: '/dashboard/student', icon: <FaGraduationCap /> },
-    { name: 'Browse Courses', path: '/dashboard/student/courses', icon: <FaSearch /> },
+    { name: 'Browse Courses', path: '/courses', icon: <FaSearch /> },
     { name: 'My Learning', path: '/dashboard/student/learning', icon: <FaBook /> },
-    { name: 'Messages', path: '/dashboard/student/messages', icon: <FaComments /> },
-    { name: 'Certificates', path: '/dashboard/student/certificates', icon: <FaCertificate /> },
-    { name: 'Profile', path: '/dashboard/student/profile', icon: <FaUserCircle /> },
+    { name: 'Messages', path: '/dashboard/student/messages', icon: <FaComments /> }
+    // { name: 'Profile', path: '/dashboard/student/profile', icon: <FaUserCircle /> },
   ];
 
   const isActive = (path) => {

@@ -5,140 +5,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { 
   FaSearch, FaFilter, FaSortAmountDown, FaChevronDown, 
-  FaGraduationCap, FaStar, FaUserTie, FaDesktop
+  FaGraduationCap, FaStar, FaUserTie, FaDesktop,
+  FaSpinner
 } from 'react-icons/fa';
 import CourseCard from '../components/ui/CourseCard';
-
-const coursesData = [
-  {
-    id: "68034701bc4ca4202c0380f9",
-    title: "React for Beginners",
-    description: "Learn React from scratch with hands-on projects and exercises. Perfect for JavaScript developers looking to level up their frontend skills.",
-    image: "/images/courses/react.jpg",
-    price: 0,
-    category: "Web Development",
-    instructor: {
-      name: "Professor Chad",
-      avatar: "/images/teachers/chad.jpg"
-    },
-    rating: 4.7,
-    students: 1435,
-    duration: "12 hours",
-    level: "Beginner"
-  },
-  {
-    id: "68034701bc4ca4202c0380fa",
-    title: "Advanced JavaScript Concepts",
-    description: "Deep dive into advanced JavaScript concepts including closures, prototypes, async programming and design patterns.",
-    image: "/images/courses/javascript.jpg",
-    price: 49.99,
-    category: "Web Development",
-    instructor: {
-      name: "Professor Chad",
-      avatar: "/images/teachers/chad.jpg"
-    },
-    rating: 4.9,
-    students: 982,
-    duration: "15 hours",
-    level: "Advanced"
-  },
-  {
-    id: "68034701bc4ca4202c0380fb",
-    title: "Complete Python Masterclass",
-    description: "Master Python programming from the ground up. Learn data analysis, web development, and automation with Python.",
-    image: "/images/courses/python.jpg",
-    price: 39.99,
-    category: "Programming",
-    instructor: {
-      name: "Dr. Sarah Johnson",
-      avatar: "/images/teachers/sarah.jpg"
-    },
-    rating: 4.8,
-    students: 2150,
-    duration: "24 hours",
-    level: "All Levels"
-  },
-  {
-    id: "68034701bc4ca4202c0380fc",
-    title: "UX/UI Design Fundamentals",
-    description: "Learn the principles of user experience and interface design. Create stunning, user-friendly designs that solve real problems.",
-    image: "/images/courses/ux-ui.jpg",
-    price: 59.99,
-    category: "Design",
-    instructor: {
-      name: "Mark Wilson",
-      avatar: "/images/teachers/mark.jpg"
-    },
-    rating: 4.6,
-    students: 1732,
-    duration: "18 hours",
-    level: "Beginner"
-  },
-  {
-    id: "68034701bc4ca4202c0380fd",
-    title: "Machine Learning with Python",
-    description: "Build machine learning models with Python. From classification to regression, clustering to deep learning.",
-    image: "/images/courses/ml.jpg",
-    price: 79.99,
-    category: "Data Science",
-    instructor: {
-      name: "Dr. Sarah Johnson",
-      avatar: "/images/teachers/sarah.jpg"
-    },
-    rating: 4.9,
-    students: 1305,
-    duration: "30 hours",
-    level: "Intermediate"
-  },
-  {
-    id: "68034701bc4ca4202c0380fe",
-    title: "Complete Web Development Bootcamp",
-    description: "Learn full-stack web development from scratch. HTML, CSS, JavaScript, Node.js, Express, and MongoDB covered.",
-    image: "/images/courses/web-dev.jpg",
-    price: 0,
-    category: "Web Development",
-    instructor: {
-      name: "Mark Wilson",
-      avatar: "/images/teachers/mark.jpg"
-    },
-    rating: 4.8,
-    students: 3542,
-    duration: "42 hours",
-    level: "Beginner"
-  },
-  {
-    id: "68034701bc4ca4202c0380ff",
-    title: "iOS App Development with Swift",
-    description: "Create beautiful iOS apps with Swift. Learn app architecture, UI design patterns, and publishing to the App Store.",
-    image: "/images/courses/ios.jpg",
-    price: 69.99,
-    category: "Mobile Development",
-    instructor: {
-      name: "Lisa Chen",
-      avatar: "/images/teachers/lisa.jpg"
-    },
-    rating: 4.7,
-    students: 952,
-    duration: "28 hours",
-    level: "Intermediate"
-  },
-  {
-    id: "68034701bc4ca4202c0381ff",
-    title: "Data Visualization with D3.js",
-    description: "Master data visualization techniques using the powerful D3.js library. Create interactive and engaging data visualizations for the web.",
-    image: "/images/courses/data-viz.jpg",
-    price: 49.99,
-    category: "Data Science",
-    instructor: {
-      name: "Dr. Sarah Johnson",
-      avatar: "/images/teachers/sarah.jpg"
-    },
-    rating: 4.5,
-    students: 768,
-    duration: "20 hours",
-    level: "Intermediate"
-  }
-];
 
 // Categories for filtering
 const categories = [
@@ -162,8 +32,8 @@ const levels = [
 ];
 
 export default function CoursesPage() {
-  const [courses, setCourses] = useState(coursesData);
-  const [filteredCourses, setFilteredCourses] = useState(coursesData);
+  const [courses, setCourses] = useState([]);
+  const [filteredCourses, setFilteredCourses] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedLevel, setSelectedLevel] = useState('All Levels');
@@ -171,35 +41,66 @@ export default function CoursesPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [priceRange, setPriceRange] = useState([0, 100]);
   const [priceFilter, setPriceFilter] = useState('all'); // all, free, paid
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   
-  // Current date and user info
-  const currentDateTime = "2025-04-19 08:25:13";
+  // Current date and user info 
+  const currentDateTime = "2025-04-19 10:19:23";
   const currentUser = "ZainJ5";
+
+  // Fetch courses from the backend API
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const response = await fetch('http://localhost:5000/api/courses');
+        
+        if (!response.ok) {
+          throw new Error(`Error fetching courses: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setCourses(data);
+        setFilteredCourses(data);
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Failed to fetch courses:', err);
+        setError(err.message || 'Failed to fetch courses');
+        setIsLoading(false);
+      }
+    };
+
+    fetchCourses();
+  }, []);
   
   // Apply filters and search
   useEffect(() => {
-    let result = [...coursesData];
+    if (courses.length === 0) return;
+    
+    let result = [...courses];
     
     // Apply search query
     if (searchQuery) {
       result = result.filter(course => 
-        course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.instructor.name.toLowerCase().includes(searchQuery.toLowerCase())
+        course.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        course.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (course.tutor?.name && course.tutor.name.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
     
     // Apply category filter
     if (selectedCategory !== 'All Categories') {
       result = result.filter(course => 
-        course.category.toLowerCase() === selectedCategory.toLowerCase()
+        course.category?.toLowerCase() === selectedCategory.toLowerCase()
       );
     }
     
     // Apply level filter
     if (selectedLevel !== 'All Levels') {
       result = result.filter(course => 
-        course.level.toLowerCase() === selectedLevel.toLowerCase()
+        course.level?.toLowerCase() === selectedLevel.toLowerCase()
       );
     }
     
@@ -217,20 +118,24 @@ export default function CoursesPage() {
     
     // Apply sorting
     if (selectedSort === 'popularity') {
-      result.sort((a, b) => b.students - a.students);
+      result.sort((a, b) => (b.students || 0) - (a.students || 0));
     } else if (selectedSort === 'highest-rated') {
-      result.sort((a, b) => b.rating - a.rating);
+      result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
     } else if (selectedSort === 'newest') {
-      // In a real app, you would sort by date
-      result.sort((a, b) => b.id.localeCompare(a.id));
+      // Sort by createdAt date if available
+      result.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+        const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+        return dateB - dateA;
+      });
     } else if (selectedSort === 'price-low-high') {
-      result.sort((a, b) => a.price - b.price);
+      result.sort((a, b) => (a.price || 0) - (b.price || 0));
     } else if (selectedSort === 'price-high-low') {
-      result.sort((a, b) => b.price - a.price);
+      result.sort((a, b) => (b.price || 0) - (a.price || 0));
     }
     
     setFilteredCourses(result);
-  }, [searchQuery, selectedCategory, selectedLevel, selectedSort, priceFilter, priceRange]);
+  }, [courses, searchQuery, selectedCategory, selectedLevel, selectedSort, priceFilter, priceRange]);
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -432,10 +337,45 @@ export default function CoursesPage() {
             </div>
           </div>
           
-          {filteredCourses.length > 0 ? (
+          {isLoading ? (
+            <div className="text-center py-16">
+              <FaSpinner className="animate-spin mx-auto h-12 w-12 text-blue-600 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900">Loading courses...</h3>
+            </div>
+          ) : error ? (
+            <div className="text-center py-16 bg-white rounded-lg shadow">
+              <div className="mx-auto h-12 w-12 text-red-600 mb-4">❌</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Error loading courses</h3>
+              <p className="text-gray-500 mb-6 max-w-md mx-auto">{error}</p>
+              <button 
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : filteredCourses.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredCourses.map(course => (
-                <CourseCard key={course.id} course={course} />
+                <CourseCard 
+                  key={course._id} 
+                  course={{
+                    id: course._id,
+                    title: course.title,
+                    description: course.description,
+                    image: course.thumbnail || '/images/courses/placeholder.jpg',
+                    price: course.price,
+                    category: course.category || 'Uncategorized',
+                    instructor: {
+                      name: course.tutor?.name || 'Instructor',
+                      avatar: course.tutor?.avatar || '/images/teachers/default.jpg'
+                    },
+                    rating: course.rating || 0,
+                    students: course.students || 0,
+                    duration: course.duration || 'N/A',
+                    level: course.level || 'All Levels'
+                  }} 
+                />
               ))}
             </div>
           ) : (
@@ -460,8 +400,8 @@ export default function CoursesPage() {
             </div>
           )}
           
-          {/* Pagination */}
-          {filteredCourses.length > 0 && (
+          {/* Pagination - only show if there are courses and not loading */}
+          {!isLoading && !error && filteredCourses.length > 0 && (
             <div className="mt-12 flex justify-center">
               <button className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 shadow-sm">
                 Load More Courses
