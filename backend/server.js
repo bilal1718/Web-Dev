@@ -15,6 +15,7 @@ const Notification = require("./models/Notification");
 dotenv.config();
 connectDB();
 
+
 const app = express();
 const server = http.createServer(app);
 
@@ -25,6 +26,9 @@ const io = new Server(server, {
     methods: ["GET", "POST"]
   }
 });
+
+app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+
 
 // ✅ Middleware
 app.use(cors());
