@@ -1,5 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const Course = require("../models/Course");
+const Enrollment = require("../models/Enrollment");
+
 
 // POST /api/courses
 const createCourse = asyncHandler(async (req, res) => {
@@ -70,8 +72,24 @@ const getAllCourses = asyncHandler ( async (req, res) => {
       res.status(500).json({ message: "Failed to fetch course" });
     }
   });
-  
+
+// GET /api/courses/:id
+const getStudentsInCourse = asyncHandler(async (req, res) => {
+  try {
+    const courseId = req.params.id;
+
+    const enrollments = await Enrollment.find({ course: courseId }).populate("student", "name email");
+
+    const students = enrollments.map(enroll => enroll.student);
+
+    res.status(200).json(students);
+  } catch (error) {
+    console.error("Error fetching students:", error.message);
+    res.status(500).json({ message: "Failed to fetch students" });
+  }
+});
 module.exports = {
+  getStudentsInCourse,
     getAllCourses,
     getCourseById,
   createCourse,

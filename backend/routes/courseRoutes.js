@@ -6,7 +6,8 @@ const {
   updateCourse,
   deleteCourse,
   getAllCourses,
-  getCourseById
+  getCourseById,
+  getStudentsInCourse
 } = require("../controllers/courseController");
 const { protect, protectTutor } = require("../middlewares/authMiddleware");
 
@@ -14,6 +15,7 @@ router.get("/my", protect, protectTutor, getMyCourses);
 router.post("/", protect, protectTutor, createCourse);
 router.patch("/:id", protect, protectTutor, updateCourse);
 router.delete("/:id", protect, protectTutor, deleteCourse);
+router.get("/:id/students", protect, protectTutor, getStudentsInCourse);
 
 router.get("/", getAllCourses);
 router.get("/:id", getCourseById);
